@@ -1,4 +1,10 @@
 
 # files to be excluded
+
+# pycharm enviroment
 .idea
+
+#result videos
+*.avi
+*.mp4
 

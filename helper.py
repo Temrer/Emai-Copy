@@ -34,12 +34,17 @@ def verify_label(coords: hand_lib.coords, frame_count, label, hlib: hand_lib.han
     # we calculate the hand that is the closest from current pos
     closest_dist = 9999999
     closest_id = None
-    for hand in hlib.hands:
+    for id in hlib.hands:
+        hand = hlib.hands[id]
         virtual_pos = hand['position_history'][-1]['position']
 
         distance = math.sqrt((virtual_pos[0] - pos[0])**2 + (virtual_pos[1] - pos[1])**2)
         if distance < closest_dist:
             closest_dist = distance
             closest_id = hand['id']
+
+    if not closest_id:
+        return False, 0
+    return True, int(closest_id)
 
         

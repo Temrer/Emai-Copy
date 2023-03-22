@@ -78,6 +78,10 @@ def process_hand(results, frame, width, height, frame_count, original_fps, draw 
 
 
         label = str(get_hand_label(idx, results))
+        succ, idx = verify_label(hlib.coords(x, x1, y, y1), frame_count, label, hand_lib, 20)
+        if succ:
+            label = hand_lib.get_label_from_id(idx)
+
         if label != 'None':
             hand_lib.update_hand(label, hlib.coords(x, x1, y, y1), hand_landmarks, calc_time(original_fps, frame_count))
             hand_frames.append(cv2.cvtColor(frame[y:y1, x:x1], cv2.COLOR_RGB2BGR))
@@ -141,11 +145,21 @@ def main():
     print('start')
     start_time = 1
     video = 'HandsMotion1.mp4'
-    process_frequency = 30
+    process_frequency = 2
+    camera = True
 
 
-    cap = cv2.VideoCapture(video)
-    original_fps = cap.get(cv2.CAP_PROP_FPS)
+    if camera:
+        cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+        fourcc = cv2.VideoWriter_fourcc(*'MP4V')
+        result = cv2.VideoWriter('Output.mp4', fourcc, 30, (1280, 960))
+        original_fps = 30
+    else:
+        cap = cv2.VideoCapture(video)
+        original_fps = cap.get(cv2.CAP_PROP_FPS)
+
+    if not cap.isOpened():
+        raise IOError("Cannot open webcam")
     frame_count = 0
     hand_detect = mp_hands.Hands(
         model_complexity=1,
@@ -167,7 +181,12 @@ def main():
     hand_frames = []
     hand_ids = []
     last_tick = frame_count
-    while cap.isOpened():
+
+    if camera:
+        continue_condition = True
+    else:
+        continue_condition = cap.isOpened()
+    while continue_condition:
         ret, frame = cap.read()
         if not ret:
             break

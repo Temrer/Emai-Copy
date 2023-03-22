@@ -116,5 +116,5 @@ class handLib:
         time = entry['time']
         return position, time
 
-    def __foolproof(self, entry):
-        pass
+    def get_label_from_id(self, idx):
+        return self.ids[idx]['label']
