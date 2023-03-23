@@ -4,7 +4,11 @@
 # pycharm enviroment
 .idea
 
+# visual studio enviroment
+.vs
+
 #result videos
 *.avi
 *.mp4
+
 

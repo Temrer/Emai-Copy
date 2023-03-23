@@ -1,19 +1,23 @@
 import cv2
-import hand_lib as hlib
-import numpy as np
-from time import time
-from helper import *
+from Libraries import hand_lib as hlib
+from Libraries.helper import *
 import mediapipe as mp
+
 mp_drawing = mp.solutions.drawing_utils
 mp_drawing_styles = mp.solutions.drawing_styles
 mp_hands = mp.solutions.hands
 mp_face_detection = mp.solutions.face_detection
 hand_lib = hlib.handLib()
+hand_detect = None
+face_detect = None
+width  = None
+height = None
+helper = Helper()
 
 
 
-
-def process_face(results, frame, width, height, draw = False):
+def process_face(results, frame, draw = False):
+    global width, height
     if not results:
         print('No face detected')
         return None, frame
@@ -43,8 +47,10 @@ def get_hand_label(index, results):
     return output
 
 
-def process_hand(results, frame, width, height, frame_count, original_fps, draw = False, annotations = False):
+def process_hand(results, frame, frame_count, draw = False, annotations = False):
+    global height, width
     hand_frames = []
+
 
     if not results.multi_hand_landmarks:
         return [], frame
@@ -76,14 +82,10 @@ def process_hand(results, frame, width, height, frame_count, original_fps, draw 
         if y1 > height:
             y1 = int(height)
 
-
         label = str(get_hand_label(idx, results))
-        succ, idx = verify_label(hlib.coords(x, x1, y, y1), frame_count, label, hand_lib, 20)
-        if succ:
-            label = hand_lib.get_label_from_id(idx)
 
         if label != 'None':
-            hand_lib.update_hand(label, hlib.coords(x, x1, y, y1), hand_landmarks, calc_time(original_fps, frame_count))
+            hand_lib.update_hand(label, hand_landmarks, helper.calc_time(frame_count))
             hand_frames.append(cv2.cvtColor(frame[y:y1, x:x1], cv2.COLOR_RGB2BGR))
 
         if draw:
@@ -98,7 +100,8 @@ def process_hand(results, frame, width, height, frame_count, original_fps, draw 
 
     return hand_frames, frame
 
-def prep_first_frame(capture, hands, face_detection, frame_count, original_fps):
+def prep_first_frame(capture, frame_count):
+    global width, height, hand_detect, face_detect
     cap = capture
     ret, frame = cap.read()
 
@@ -111,28 +114,32 @@ def prep_first_frame(capture, hands, face_detection, frame_count, original_fps):
     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
     #  processing hand landmarks
-    results = hands.process(frame)
-    hand_frames, _frame = process_hand(results, frame, width, height, frame_count, original_fps)
+    results = hand_detect.process(frame)
+    hand_frames, _frame = process_hand(results, frame, frame_count, draw=True, annotations=True)
 
     #  processing face
-    results = face_detection.process(frame)
-    face_img, _frame = process_face(results, frame, width, height)
+    results = face_detect.process(frame)
+    face_img, _frame = process_face(results, frame)
 
 
     frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
 
 
     #  getting average size of hands by the first diagonal
-    head_diag = calc_diag(face_img)
+    head_diag = helper.calc_diag_from_frame(face_img)
+    helper.set_prop('face_avg', head_diag)
     #       calculating average size of hands
     hand_diags = 0
     hands = 0
     for hand in hand_frames:
         hands += 1
-        hand_diags += calc_diag(hand)
+        hand_diags += helper.calc_diag_from_frame(hand)
     hand_avg_diag = hand_diags / hands
+    helper.set_prop('hand_avg', hand_avg_diag)
 
     fh_ratio = head_diag / hand_avg_diag  # face-head ratio
+    hand_lib.update_frame_variables(fh_ratio, head_diag)
+    helper.set_prop('fh_ratio', fh_ratio)
     # will be used to calculate relative velocity of hand
 
     cv2.imshow('MediaPipe Hands', frame)
@@ -146,7 +153,7 @@ def main():
     start_time = 1
     video = 'HandsMotion1.mp4'
     process_frequency = 2
-    camera = True
+    camera = False
 
 
     if camera:
@@ -154,13 +161,16 @@ def main():
         fourcc = cv2.VideoWriter_fourcc(*'MP4V')
         result = cv2.VideoWriter('Output.mp4', fourcc, 30, (1280, 960))
         original_fps = 30
+        helper.set_prop('fps', original_fps)
     else:
         cap = cv2.VideoCapture(video)
         original_fps = cap.get(cv2.CAP_PROP_FPS)
+        helper.set_prop('fps', original_fps)
 
     if not cap.isOpened():
         raise IOError("Cannot open webcam")
     frame_count = 0
+    global hand_detect, face_detect
     hand_detect = mp_hands.Hands(
         model_complexity=1,
         min_detection_confidence=0.6,
@@ -171,10 +181,12 @@ def main():
         min_detection_confidence=0.5
     ).__enter__()
 
-    fh_ratio, h_avg_diag = prep_first_frame(cap, hand_detect, face_detect, 0, original_fps)
+    fh_ratio, h_avg_diag = prep_first_frame(cap, 0)
 
+    global width, height
     width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
     height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
+    hand_lib.set_frame_size([width, height])
 
     converted_freq = 1/process_frequency
     #  marking the last time the frame has been processed
@@ -201,19 +213,18 @@ def main():
             hand_frames, processed_frame = process_hand(
                 results,
                 frame,
-                width,
-                height,
                 frame_count,
-                original_fps,
                 draw=True,
                 annotations=True
             )
 
             # calculate the velocity of the right hand
             try:
-                old_pos, old_time = hand_lib.decompile_history_entry(hand_lib.get_hand_history_entry(0, -2))
-                new_pos, new_time = hand_lib.decompile_history_entry(hand_lib.get_hand_history_entry(0, -1))
-                velocity = calc_velocity(old_pos, old_time, new_pos, new_time, fh_ratio, h_avg_diag)
+                old_entry = hand_lib.get_hand_history_entry(1, -2)
+                new_entry = hand_lib.get_hand_history_entry(1, -1)
+                old_pos, old_time = old_entry.h_root, old_entry.time
+                new_pos, new_time = new_entry.h_root, new_entry.time
+                velocity = helper.calc_velocity(old_pos, old_time, new_pos, new_time)
                 if velocity > 1:
                     frame.flags.writeable = True
                     frame = cv2.line(frame, tuple(old_pos), tuple(new_pos), (0, 100, 255), 10)
@@ -228,6 +239,7 @@ def main():
         cv2.imshow('MediaPipe Hands', frame)
         if cv2.waitKey(5) & 0xFF == 27:
             break
+
 
 
     hand_detect.close()
