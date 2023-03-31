@@ -1,3 +1,5 @@
+import math
+
 from Libraries.Hands.hand_module import *
 import cv2
 import numpy as np
@@ -49,7 +51,7 @@ class handLib:
             return hsv_8u, avg
 
     def sample(self, rate, current_frame_number, frames):
-        rate_to_frames = self.__fps / rate
+        rate_to_frames = math.ceil(int(self.__fps) / rate)
         if current_frame_number % rate_to_frames != 0:
             return
         self.movement_frames.append(frames[1])

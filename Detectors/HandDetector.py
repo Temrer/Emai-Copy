@@ -1,4 +1,6 @@
 import mediapipe as mp
+import numpy as np
+
 from Libraries.Hands import hand_lib as hlib
 import cv2
 
@@ -24,11 +26,14 @@ class HandDetector:
         self.sample_rate = 15
 
 
+
     def __process_hand(self, results, frames, draw=False, annotations=False):
         roi_list = []
 
+        hand_frame = np.zeros_like(frames[1])
+
         if not results.multi_hand_landmarks:
-            return frames, None
+            return frames, None, cv2.cvtColor(hand_frame, cv2.COLOR_BGR2GRAY)
 
         for idx, hand_landmarks in enumerate(results.multi_hand_landmarks):
             x = self.__width
@@ -61,17 +66,11 @@ class HandDetector:
             hsv_frame, avg = self.__hand_lib.calc_velocity(hentry)
             current_roi = hentry.current_roi
             TRESHOLD = 30
-            if avg > TRESHOLD:
-                current_roi = cv2.putText(current_roi, 'moving', (0, 20), cv2.FONT_HERSHEY_COMPLEX_SMALL, 1,
-                                          (0, 255, 0))
-            else:
-                current_roi = cv2.putText(current_roi, 'resting', (0, 20), cv2.FONT_HERSHEY_COMPLEX_SMALL, 1,
-                                          (0, 255, 0))
             roi_list.append([hsv_frame, avg, current_roi])
 
             if draw:
                 self.__mp_drawing.draw_landmarks(
-                    frames[1],
+                    hand_frame,
                     hand_landmarks,
                     self.__mp_hands.HAND_CONNECTIONS,
                     self.__mp_drawing_styles.get_default_hand_landmarks_style(),
@@ -84,13 +83,14 @@ class HandDetector:
                         frames[1] = cv2.putText(frames[1], 'resting', (0, 20), cv2.FONT_HERSHEY_COMPLEX_SMALL, 1,
                                                 (0, 255, 0))
 
-        return frames, roi_list
+        return frames, roi_list, cv2.cvtColor(hand_frame, cv2.COLOR_BGR2GRAY)
 
     def process(self, frames, current_frame_number):
         frame = cv2.cvtColor(frames[1], cv2.COLOR_BGR2RGB)
+
         results = self.__hand_detect.process(frame)
 
-        frames, roi_list = self.__process_hand(results, frames, draw=True)
+        frames, roi_list, hand_frame = self.__process_hand(results, frames, draw=True)
         if roi_list is not None:
             movement = False
             for entry in roi_list:
@@ -98,3 +98,12 @@ class HandDetector:
                     movement = True
             if movement:
                 self.__hand_lib.sample(self.sample_rate, current_frame_number, frames)
+        return frames
+
+    def close(self):
+        self.__hand_detect.close()
+        self.__out.release()
+
+    def get_movement_frames(self):
+        return  self.__hand_lib.movement_frames
+

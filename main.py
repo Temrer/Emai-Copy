@@ -1,6 +1,8 @@
 import cv2
 from Libraries.helper import *
 import Detectors.HandDetector as HandDetector
+import Detectors.BodyDetector as BodyDetector
+from time import sleep
 
 
 helper = Helper()
@@ -13,7 +15,7 @@ def main():
     print('start')
     video = 'HandsMotion1.mp4'
     process_frequency = 2
-    camera = True
+    camera = False
     sample_rate = 5
 
 
@@ -37,13 +39,14 @@ def main():
     if not cap.isOpened():
         raise IOError("Cannot open webcam")
     frame_count = 0
-    hand_detect = HandDetector.HandDetector(original_fps, (height, width))
 
     frames = []
 
     ret, frame = cap.read()
     width  = int(width//2)
     height = int(height//2)
+    hand_detect = HandDetector.HandDetector(original_fps, (height, width))
+    body_detect = BodyDetector.BodyDetector((height, width))
     print(ret)
     old_frame = cv2.resize(frame, (width, height))
     frames.insert(0, old_frame)
@@ -51,8 +54,9 @@ def main():
     ret, frame = cap.read()
     new_frame = cv2.resize(frame, (width, height))
     frames.insert(1, new_frame)
-    cv2.imshow('MediaPipe Hands', frames[1])
     frame_count = 2
+    hand_detect.process(frames, frame_count)
+    cv2.imshow('MediaPipe Hands', frames[1])
 
     if camera:
         continue_condition = True
@@ -67,6 +71,7 @@ def main():
         old_frame = frames[1]
         frames[0] = old_frame
         frames[1] = new_frame
+        frames = hand_detect.process(frames, frame_count)
 
         cv2.imshow('MediaPipe Hands', frames[1])
         if cv2.waitKey(5) & 0xFF == 27:
@@ -76,6 +81,12 @@ def main():
 
     hand_detect.close()
     cap.release()
+
+    for frame in hand_detect.get_movement_frames():
+        cv2.imshow("movement", frame)
+        if cv2.waitKey(5) & 0xFF == 27:
+            break
+        sleep(0.3)
 
 
 
