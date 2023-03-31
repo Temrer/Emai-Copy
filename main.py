@@ -56,6 +56,7 @@ def main():
     frames.insert(1, new_frame)
     frame_count = 2
     hand_detect.process(frames, frame_count)
+    body_detect.process(frames, frame_count)
     cv2.imshow('MediaPipe Hands', frames[1])
 
     if camera:
@@ -72,6 +73,7 @@ def main():
         frames[0] = old_frame
         frames[1] = new_frame
         frames = hand_detect.process(frames, frame_count)
+        body_detect.process(frames, frame_count)
 
         cv2.imshow('MediaPipe Hands', frames[1])
         if cv2.waitKey(5) & 0xFF == 27:

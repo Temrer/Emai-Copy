@@ -102,7 +102,6 @@ class HandDetector:
 
     def close(self):
         self.__hand_detect.close()
-        self.__out.release()
 
     def get_movement_frames(self):
         return  self.__hand_lib.movement_frames
