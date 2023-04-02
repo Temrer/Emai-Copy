@@ -11,4 +11,9 @@
 *.avi
 *.mp4
 
+#result images
+*.jpg
+*.png
+
+
 

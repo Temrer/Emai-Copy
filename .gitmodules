@@ -1,0 +1,3 @@
+[submodule "libs/yolov7"]
+	path = libs/yolov7
+	url = https://github.com/WongKinYiu/yolov7.git
