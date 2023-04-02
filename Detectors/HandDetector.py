@@ -63,9 +63,9 @@ class HandDetector:
 
             roi = self.__hand_lib.coords(y, y1, x, x1)
             hentry = self.__hand_lib.hand_entry(frames[0], frames[1], roi, 40)
-            hsv_frame, avg = self.__hand_lib.calc_velocity(hentry)
+            hsv_frame, avg = self.__hand_lib.calc_velocity(hentry, gpu=True)
             current_roi = hentry.current_roi
-            TRESHOLD = 30
+            TRESHOLD = 50
             roi_list.append([hsv_frame, avg, current_roi])
 
             if draw:

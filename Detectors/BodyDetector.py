@@ -29,7 +29,7 @@ class BodyDetector():
             self.__mp_pose.POSE_CONNECTIONS,
             landmark_drawing_spec=self.__mp_drawing_styles.get_default_pose_landmarks_style())
 
-        output_frame = cv2.resize(output_frame,(self.__width, self.__height))
+        output_frame = cv2.resize(output_frame, (self.__width, self.__height))
         cv2.imshow('pose', output_frame)
 
     def close(self):

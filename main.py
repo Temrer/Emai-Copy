@@ -2,7 +2,7 @@ import cv2
 from Libraries.helper import *
 import Detectors.HandDetector as HandDetector
 import Detectors.BodyDetector as BodyDetector
-from time import sleep
+from time import sleep, time
 
 
 helper = Helper()
