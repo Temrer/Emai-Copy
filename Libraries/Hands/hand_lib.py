@@ -1,6 +1,7 @@
 import math
 
 from Libraries.Hands.hand_module import *
+from Libraries.helper import Coords
 import cv2
 import numpy as np
 

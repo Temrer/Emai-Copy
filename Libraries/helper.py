@@ -4,6 +4,15 @@ import math
 a library with some methods to aid for the main program
 """
 
+class Coords:
+    def __init__(self, y1, y2, x1, x2):
+        self.x1 = x1
+        self.x2 = x2
+        self.y1 = y1
+        self.y2 = y2
+        self.shape = (y2-y1, x2-x1)
+
+
 class Helper:
     def __init__(self):
         self.__face_avg = None

@@ -3,6 +3,8 @@ from Libraries.helper import *
 import Detectors.HandDetector as HandDetector
 import Detectors.BodyDetector as BodyDetector
 from time import sleep, time
+from os.path import join
+import os
 
 
 helper = Helper()
@@ -16,7 +18,7 @@ def main():
     video = 'HandsMotion1.mp4'
     process_frequency = 2
     camera = False
-    sample_rate = 5
+    sample_rate = 10
 
 
     if camera:
@@ -46,7 +48,7 @@ def main():
     width  = int(width//2)
     height = int(height//2)
     hand_detect = HandDetector.HandDetector(original_fps, (height, width))
-    body_detect = BodyDetector.BodyDetector((height, width))
+    body_detect = BodyDetector.BodyDetectorCPU((height, width), original_fps)
     print(ret)
     old_frame = cv2.resize(frame, (width, height))
     frames.insert(0, old_frame)
@@ -55,7 +57,7 @@ def main():
     new_frame = cv2.resize(frame, (width, height))
     frames.insert(1, new_frame)
     frame_count = 2
-    hand_detect.process(frames, frame_count)
+    # hand_detect.process(frames, frame_count)
     body_detect.process(frames, frame_count)
     cv2.imshow('MediaPipe Hands', frames[1])
 
@@ -72,8 +74,10 @@ def main():
         old_frame = frames[1]
         frames[0] = old_frame
         frames[1] = new_frame
-        frames = hand_detect.process(frames, frame_count)
-        body_detect.process(frames, frame_count)
+        # frames = hand_detect.process(frames, frame_count)
+        velocity, movement = body_detect.process(frames, frame_count)
+        if movement:
+            body_detect.sample(sample_rate, frame_count, frames)
 
         cv2.imshow('MediaPipe Hands', frames[1])
         if cv2.waitKey(5) & 0xFF == 27:
@@ -84,8 +88,18 @@ def main():
     hand_detect.close()
     cap.release()
 
-    for frame in hand_detect.get_movement_frames():
+
+    path = join(r"J:\Petru\Projects", r"Results\Vid0")
+    if not os.path.exists(path):
+        os.mkdir(r"J:\Petru\Projects\Results")
+        os.mkdir(path)
+    os.chdir(path)
+    file_name = "Frame"
+    for index, frame in enumerate(body_detect.movement_frames):
         cv2.imshow("movement", frame)
+        final_file_name = file_name+str(index)+'.jpg'
+        cv2.imwrite(final_file_name, frame)
+
         if cv2.waitKey(5) & 0xFF == 27:
             break
         sleep(0.3)
