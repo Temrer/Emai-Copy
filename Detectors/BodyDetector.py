@@ -68,6 +68,8 @@ class BodyDetectorCPU():
             results.pose_landmarks,
             self.__mp_pose.POSE_CONNECTIONS,
             landmark_drawing_spec=self.__mp_drawing_styles.get_default_pose_landmarks_style())
+        if results.pose_landmarks is None:
+            return 0, 0
 
         minx = 1
         maxx = 0

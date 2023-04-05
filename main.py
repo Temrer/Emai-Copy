@@ -17,8 +17,14 @@ def main():
     print('start')
     video = 'HandsMotion1.mp4'
     process_frequency = 2
-    camera = False
+    camera = True
     sample_rate = 10
+    record = False
+
+    if camera:
+        units = "seconds"
+    else:
+        units = "frames"
 
 
     if camera:
@@ -88,21 +94,21 @@ def main():
     hand_detect.close()
     cap.release()
 
+    if record:
+        path = join(r"J:\Petru\Projects", r"Results\Vid0")
+        if not os.path.exists(path):
+            os.mkdir(r"J:\Petru\Projects\Results")
+            os.mkdir(path)
+        os.chdir(path)
+        file_name = "Frame"
+        for index, frame in enumerate(body_detect.movement_frames):
+            cv2.imshow("movement", frame)
+            final_file_name = file_name+str(index)+'.jpg'
+            cv2.imwrite(final_file_name, frame)
 
-    path = join(r"J:\Petru\Projects", r"Results\Vid0")
-    if not os.path.exists(path):
-        os.mkdir(r"J:\Petru\Projects\Results")
-        os.mkdir(path)
-    os.chdir(path)
-    file_name = "Frame"
-    for index, frame in enumerate(body_detect.movement_frames):
-        cv2.imshow("movement", frame)
-        final_file_name = file_name+str(index)+'.jpg'
-        cv2.imwrite(final_file_name, frame)
-
-        if cv2.waitKey(5) & 0xFF == 27:
-            break
-        sleep(0.3)
+            if cv2.waitKey(5) & 0xFF == 27:
+                break
+            sleep(0.3)
 
 
 
