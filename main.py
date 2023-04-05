@@ -15,11 +15,12 @@ helper = Helper()
 
 def main():
     print('start')
-    video = 'HandsMotion1.mp4'
+    os.chdir(join(os.path.dirname(os.path.dirname(__file__)), "Sources"))
+    video = 'cutVid.mp4'
     process_frequency = 2
-    camera = True
+    camera = False
     sample_rate = 10
-    record = False
+    record = True
 
     if camera:
         units = "seconds"
@@ -95,9 +96,12 @@ def main():
     cap.release()
 
     if record:
-        path = join(r"J:\Petru\Projects", r"Results\Vid0")
+        base_path = r"J:\Petru\Projects"
+        path = join(r"J:\Petru\Projects", r"Results\Vid3")
+        if not os.path.exists(join(base_path, "Results")):
+            os.mkdir(join(base_path, "Results"))
+
         if not os.path.exists(path):
-            os.mkdir(r"J:\Petru\Projects\Results")
             os.mkdir(path)
         os.chdir(path)
         file_name = "Frame"
@@ -106,9 +110,7 @@ def main():
             final_file_name = file_name+str(index)+'.jpg'
             cv2.imwrite(final_file_name, frame)
 
-            if cv2.waitKey(5) & 0xFF == 27:
-                break
-            sleep(0.3)
+        print("done")
 
 
 

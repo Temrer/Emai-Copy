@@ -38,6 +38,7 @@ class BodyDetectorCPU():
                 )
             except:
                 print(Roi.x1,Roi.x2,Roi.y1,Roi.y2)
+                raise
             magnitude, angle = cv2.cartToPolar(flow[..., 0], flow[..., 1], angleInDegrees=True)
             hsv = cv2.normalize(
                 magnitude, None, 0.0, 1.0, cv2.NORM_MINMAX, -1
@@ -48,8 +49,6 @@ class BodyDetectorCPU():
                 if x > 100:
                     avg += x
             velocity = avg/(self.__width_halved * self.__height_halved)
-            if velocity > self.MOVEMENT_THRESHOLD:
-                cv2.imshow('curr frame', landmarks_frame_gray)
             self.__last_frame = cv2.cvtColor(landmarks_frame, cv2.COLOR_RGB2GRAY)
             return velocity, velocity > self.MOVEMENT_THRESHOLD
         else:
