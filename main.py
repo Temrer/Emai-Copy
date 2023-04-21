@@ -14,13 +14,16 @@ helper = Helper()
 
 
 def main():
+    global video_length
     print('start')
     os.chdir(join(os.path.dirname(os.path.dirname(__file__)), "Sources"))
-    video = 'cutVid.mp4'
+    video = 'Vid3.mp4'
     process_frequency = 2
     camera = False
     sample_rate = 10
     record = True
+    base_path = r"J:\Petru\Projects"
+    path = join(r"J:\Petru\Projects", r"Results\Vid5")
 
     if camera:
         units = "seconds"
@@ -43,6 +46,7 @@ def main():
         helper.set_prop('fps', original_fps)
         width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        video_length = cap.get(cv2.CAP_PROP_FRAME_COUNT)
 
 
     if not cap.isOpened():
@@ -52,8 +56,15 @@ def main():
     frames = []
 
     ret, frame = cap.read()
-    width  = int(width//2)
-    height = int(height//2)
+    ### Temporary Changes
+    # width  = int(width//2)
+    # height = int(height//2)
+
+    ratio = width/320
+    width = int(width/ratio)
+    height = int(height/ratio)
+
+
     hand_detect = HandDetector.HandDetector(original_fps, (height, width))
     body_detect = BodyDetector.BodyDetectorCPU((height, width), original_fps)
     print(ret)
@@ -82,9 +93,13 @@ def main():
         frames[0] = old_frame
         frames[1] = new_frame
         # frames = hand_detect.process(frames, frame_count)
-        velocity, movement = body_detect.process(frames, frame_count)
-        if movement:
-            body_detect.sample(sample_rate, frame_count, frames)
+        if body_detect.sample_time(sample_rate, frame_count, frames):
+            velocity, movement = body_detect.process(frames, frame_count)
+            if movement:
+                body_detect.sample(sample_rate, frame_count, frames)
+
+        if frame_count % (video_length//1000) == 0:
+            print(frame_count / (video_length//1000)/10)
 
         cv2.imshow('MediaPipe Hands', frames[1])
         if cv2.waitKey(5) & 0xFF == 27:
@@ -96,8 +111,6 @@ def main():
     cap.release()
 
     if record:
-        base_path = r"J:\Petru\Projects"
-        path = join(r"J:\Petru\Projects", r"Results\Vid3")
         if not os.path.exists(join(base_path, "Results")):
             os.mkdir(join(base_path, "Results"))
 

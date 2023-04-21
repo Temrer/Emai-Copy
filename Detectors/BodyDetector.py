@@ -25,16 +25,19 @@ class BodyDetectorCPU():
         self.MOVEMENT_THRESHOLD = 0.9
         self.movement_frames = []
 
-    def __process_body(self, landmarks_frame, Roi):
+    def __process_body(self, landmarks_frame, last_landmarks_frame, Roi):
         if self.__last_frame is not None:
             hsv = np.zeros(self.__last_frame.shape)
+            last_landmarks_frame_gray = cv2.cvtColor(last_landmarks_frame, cv2.COLOR_RGB2GRAY)
+            last_landmarks_frame_gray = cv2.resize(last_landmarks_frame_gray, (self.__width_halved, self.__height_halved))
+            last_landmarks_frame_gray_cut = last_landmarks_frame_gray[Roi.y1:Roi.y2, Roi.x1:Roi.x2]
+
             landmarks_frame_gray = cv2.cvtColor(landmarks_frame, cv2.COLOR_RGB2GRAY)
             landmarks_frame_gray = cv2.resize(landmarks_frame_gray, (self.__width_halved, self.__height_halved))
             landmarks_frame_gray_cut = landmarks_frame_gray[Roi.y1:Roi.y2, Roi.x1:Roi.x2]
-            last_landmarks_frame = self.__last_frame[Roi.y1:Roi.y2, Roi.x1:Roi.x2]
             try:
                 flow = cv2.calcOpticalFlowFarneback(
-                    last_landmarks_frame, landmarks_frame_gray_cut, None, 0.5, 5, 14, 3, 7, 1.5, 0,
+                    last_landmarks_frame_gray_cut, landmarks_frame_gray_cut, None, 0.5, 5, 14, 3, 7, 1.5, 0,
                 )
             except:
                 print(Roi.x1,Roi.x2,Roi.y1,Roi.y2)
@@ -56,6 +59,15 @@ class BodyDetectorCPU():
             return 0, False
 
     def process(self, frames, current_frame_number):
+        old_frame = cv2.cvtColor(frames[0], cv2.COLOR_BGR2RGB)
+        old_frame = cv2.resize(old_frame, (self.__width_halved, self.__height_halved))
+        old_results = self.__pose_detect.process(old_frame)
+        old_output_frame = np.zeros_like(old_frame)
+        self.__mp_drawing.draw_landmarks(
+            old_output_frame,
+            old_results.pose_landmarks,
+            self.__mp_pose.POSE_CONNECTIONS,
+            landmark_drawing_spec=self.__mp_drawing_styles.get_default_pose_landmarks_style())
 
         frame = cv2.cvtColor(frames[1], cv2.COLOR_BGR2RGB)
         frame = cv2.resize(frame, (self.__width_halved, self.__height_halved))
@@ -67,7 +79,7 @@ class BodyDetectorCPU():
             results.pose_landmarks,
             self.__mp_pose.POSE_CONNECTIONS,
             landmark_drawing_spec=self.__mp_drawing_styles.get_default_pose_landmarks_style())
-        if results.pose_landmarks is None:
+        if results.pose_landmarks is None or old_results.pose_landmarks is None:
             return 0, 0
 
         minx = 1
@@ -100,11 +112,18 @@ class BodyDetectorCPU():
 
         Roi = Coords(miny, maxy, minx, maxx)
 
-        velocity, movement = self.__process_body(output_frame, Roi)
+        velocity, movement = self.__process_body(output_frame, old_output_frame, Roi)
         return velocity, movement
 
     def close(self):
         self.__pose_detect.close()
+
+    def sample_time(self, rate, current_frame_number, frames):
+        rate_to_frames = math.ceil(int(self.__fps) / rate)
+        if current_frame_number % rate_to_frames != 0:
+            return False
+        else:
+            return True
 
     def sample(self, rate, current_frame_number, frames):
         rate_to_frames = math.ceil(int(self.__fps) / rate)
