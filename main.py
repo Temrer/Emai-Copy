@@ -110,6 +110,7 @@ def main():
     hand_detect.close()
     cap.release()
 
+
     if record:
         if not os.path.exists(join(base_path, "Results")):
             os.mkdir(join(base_path, "Results"))
